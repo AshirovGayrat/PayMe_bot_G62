@@ -55,8 +55,8 @@ public class InlineButtonUtil {
         return button;
     }
 
-    public static InlineKeyboardMarkup chekButton(String id) {
-        InlineKeyboardButton button=InlineButtonUtil.button("Chek", "chek_callback_" +id, ":dart:");
+    public static InlineKeyboardMarkup chekButton() {
+        InlineKeyboardButton button=InlineButtonUtil.button("Chek", "chek_callback", ":dart:");
         List<InlineKeyboardButton> row = InlineButtonUtil.row(button);
         return InlineButtonUtil.keyboard(InlineButtonUtil.rowList(row));
     }

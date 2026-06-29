@@ -1,6 +1,7 @@
 package uz.pdp.controller;
 
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -34,8 +35,15 @@ public class MyBot extends TelegramLongPollingBot {
             CallbackQuery callbackQuery = update.getCallbackQuery();
             String callback =  callbackQuery.getData();
             System.out.println(callbackQuery.getData());
-            SendMessage sendMessage = mainController.callbackHandler(callback, callbackQuery.getFrom().getId());
-            send(sendMessage);
+
+            if ( callback.equals("chek_callback") ) {
+                SendDocument sendDocument = mainController.createPdf( callbackQuery.getFrom().getId() );
+                send( sendDocument );
+            }
+            else {
+                SendMessage sendMessage = mainController.callbackHandler(callback, callbackQuery.getFrom().getId());
+                send(sendMessage);
+            }
         }
 
     }
@@ -50,9 +58,16 @@ public class MyBot extends TelegramLongPollingBot {
 
 
 
-    public void send(SendMessage sendMessage) {
+    public void send(Object message) {
         try {
-            execute(sendMessage);
+
+            if ( message instanceof SendMessage sendMessage ) {
+                execute(sendMessage);
+            } else if (message instanceof SendDocument sendDocument) {
+                execute( sendDocument );
+            }
+
+
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }

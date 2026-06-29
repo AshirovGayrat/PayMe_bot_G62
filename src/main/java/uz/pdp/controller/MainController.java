@@ -1,5 +1,6 @@
 package uz.pdp.controller;
 
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import uz.pdp.entity.Account;
@@ -13,6 +14,7 @@ import uz.pdp.service.AccountService;
 import uz.pdp.service.CardService;
 import uz.pdp.utils.InlineButtonUtil;
 import uz.pdp.utils.KeyboardButtonUtil;
+import uz.pdp.utils.PDFUtil;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -111,24 +113,30 @@ public class MainController {
             transfer.setFrom(fromCard.getNumber());
             transfer.setAmount(amount);
 
-            transferMap.remove(chatId);
 
             if ( fromCard.getBalance().compareTo(amount) >= 0 ) {
                 fromCard.setBalance( fromCard.getBalance().subtract(amount) );
                 toCard.setBalance( toCard.getBalance().add(amount) );
 
                 transfer.setTime(LocalDateTime.now());
+                transferMap.put( chatId, transfer );
                 cardService.saveTransfer(fromCard, toCard, transfer);
 
                 sendMessage.setText("Transfer success");
+                sendMessage.setReplyMarkup( InlineButtonUtil.chekButton() );
             }
             else {
                 sendMessage.setText("Balance not enough");
             }
         }
 
-
         return sendMessage;
+    }
+
+    public SendDocument createPdf( Long chatId ) {
+        Transfer transfer = transferMap.get(chatId);
+        transferMap.remove(chatId);
+        return PDFUtil.createAndBuyPdf(transfer, chatId);
     }
 
 
