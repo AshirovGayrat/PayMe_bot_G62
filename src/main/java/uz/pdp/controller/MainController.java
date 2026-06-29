@@ -5,16 +5,21 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import uz.pdp.entity.Account;
 import uz.pdp.entity.Card;
 import uz.pdp.entity.LoginAccount;
+import uz.pdp.entity.Transfer;
 import uz.pdp.enums.AccountStep;
 import uz.pdp.enums.LoginStep;
+import uz.pdp.enums.TransferStep;
 import uz.pdp.service.AccountService;
 import uz.pdp.service.CardService;
 import uz.pdp.utils.InlineButtonUtil;
 import uz.pdp.utils.KeyboardButtonUtil;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 public class MainController {
 
@@ -25,12 +30,13 @@ public class MainController {
 
     private Map<Long, LoginAccount>  loginMap = new HashMap<>();
 
+    private Map<Long, Transfer>   transferMap = new HashMap<>();
 
 
     public SendMessage textHandler (Message message) {
 
         Long chatId = message.getChatId();
-        String text = message.getText(); // "balance"
+        String text = message.getText(); // "100000"
 
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
@@ -47,6 +53,8 @@ public class MainController {
             return login(message);
         } else if ( map.get(chatId) != null) {
             return registration(message);
+        } else if (transferMap.get(chatId) != null) {
+            return transfer(message);
         }
 
         return  sendMessage;
@@ -62,10 +70,15 @@ public class MainController {
             String balance = getBalanceByAccountId(chatId);
             sendMessage.setText("Balance : " + balance);
         } else if (callback.startsWith("transfer")) {
-            // TODO home work
+            sendMessage.setText("Enter card number");
+            Transfer transfer = new Transfer();
+            transfer.setId(UUID.randomUUID().toString());
+            transfer.setStep( TransferStep.CARD );
+            transferMap.put(chatId, transfer);
         }
         return   sendMessage;
     }
+
 
     private String getBalanceByAccountId(Long chatId) {
         Optional<Account> account = accountService.getAccountById(chatId);
@@ -74,6 +87,49 @@ public class MainController {
     }
 
 
+    public SendMessage transfer(Message message) {
+        Long chatId = message.getChatId();
+        String text = message.getText();
+
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chatId);
+
+        Transfer transfer = transferMap.get(chatId);
+
+        if ( transfer.getStep().equals(TransferStep.CARD) ) {
+            transfer.setTo( text );
+            transfer.setStep(TransferStep.AMOUNT);
+            transferMap.put(chatId, transfer);
+            sendMessage.setText("Enter amount");
+        } else if (transfer.getStep().equals(TransferStep.AMOUNT)) {
+
+            BigDecimal amount = new BigDecimal(text);
+            Account fromAccount  = accountService.getAccountById(chatId).get();
+            Card fromCard = cardService.getCardByPhoneNumber(fromAccount.getPhoneNumber());
+            Card toCard = cardService.getCardByCardNumber(transfer.getTo());
+
+            transfer.setFrom(fromCard.getNumber());
+            transfer.setAmount(amount);
+
+            transferMap.remove(chatId);
+
+            if ( fromCard.getBalance().compareTo(amount) >= 0 ) {
+                fromCard.setBalance( fromCard.getBalance().subtract(amount) );
+                toCard.setBalance( toCard.getBalance().add(amount) );
+
+                transfer.setTime(LocalDateTime.now());
+                cardService.saveTransfer(fromCard, toCard, transfer);
+
+                sendMessage.setText("Transfer success");
+            }
+            else {
+                sendMessage.setText("Balance not enough");
+            }
+        }
+
+
+        return sendMessage;
+    }
 
 
 
@@ -152,7 +208,7 @@ public class MainController {
             sendMessage.setText("Parol kiriting");
             loginMap.put(chatId, loginAccount);
         } else if (loginAccount.getStep().equals(LoginStep.PASSWORD)) {
-            map.remove(chatId);
+            loginMap.remove(chatId);
             loginAccount.setPassword(text);
             boolean res = accountService.login( loginAccount.getPhoneNumber(), loginAccount.getPassword() );
             if ( res ) {

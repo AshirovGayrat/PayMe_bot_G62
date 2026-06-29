@@ -67,12 +67,12 @@ public class MyBot extends TelegramLongPollingBot {
 
     @Override
     public String getBotUsername() {
-        return "";
+        return "https://t.me/G62_first_bot";
     }
 
     @Override
     public String getBotToken() {
-        return "";
+        return "8688915320:AAEOjizO3_hIBLLEGSR1-FHb8G1aRSCbqNY";
     }
 
 }

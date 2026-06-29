@@ -1,6 +1,7 @@
 package uz.pdp.service;
 
 import uz.pdp.entity.Card;
+import uz.pdp.entity.Transfer;
 import uz.pdp.repository.CardRepository;
 
 import java.util.List;
@@ -30,5 +31,20 @@ public class CardService {
         }
         return null;
     }
+
+    public Card getCardByCardNumber(String cardNumber) {
+        List<Card> list = cardRepository.getCards();
+        for (Card card : list) {
+            if ( card.getNumber().equals(cardNumber) ) {
+                return card;
+            }
+        }
+        return null;
+    }
+
+    public void saveTransfer(Card from, Card to, Transfer transfer) {
+        cardRepository.saveTransfer(from, to, transfer);
+    }
+
 
 }
